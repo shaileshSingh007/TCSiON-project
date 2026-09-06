@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ed-Games Hub - 3D Model Viewer</title>
+    
+    <!-- Model Viewer Library -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #d4a438;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-logo img {
+            height: 40px;
+        }
+
+        .logo-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .logo-subtext {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Title Section */
+        .title-section {
+            background: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
+            padding: 25px 30px;
+            color: white;
+        }
+
+        .title-section h1 {
+            font-size: 28px;
+            font-weight: 500;
+        }
+
+        /* Grid Container */
+        .grid-container {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Card Styles */
+        .model-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transform: rotate(-1deg);
+        }
+
+        .model-card:nth-child(even) {
+            transform: rotate(1deg);
+        }
+
+        .model-card:hover {
+            transform: scale(1.05) rotate(0deg);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        .model-card:active {
+            transform: scale(0.98);
+        }
+
+        .card-image {
+            width: 100%;
+            aspect-ratio: 1;
+            background: #8a8a8a;
+            border-radius: 5px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .card-title {
+            padding: 15px 10px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            color: #2d3a2d;
+        }
+
+        /* Fullscreen Viewer Overlay */
+        .viewer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .viewer-overlay.active {
+            display: flex;
+        }
+
+        .viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+        }
+
+        .viewer-title {
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .close-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .close-btn::before {
+            content: '×';
+        }
+
+        .viewer-container {
+            flex: 1;
+            position: relative;
+        }
+
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            background-color: #1a1a1a;
+        }
+
+        /* AR Button Styling */
+        .ar-button {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            z-index: 100;
+        }
+
+        .ar-button:hover {
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 8px 30px rgba(76, 175, 80, 0.5);
+        }
+
+        .ar-button svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Loading indicator */
+        .loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Chat bubble icon */
+        .chat-bubble {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: #2196F3;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(33, 150, 243, 0.4);
+            z-index: 500;
+        }
+
+        .chat-bubble svg {
+            width: 30px;
+            height: 30px;
+            fill: white;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                padding: 10px 15px;
+            }
+
+            .logo-text {
+                font-size: 18px;
+            }
+
+            .title-section h1 {
+                font-size: 22px;
+            }
+
+            .grid-container {
+                padding: 15px;
+                gap: 20px;
+            }
+
+            .card-title {
+                font-size: 20px;
+            }
+
+            .model-card {
+                transform: rotate(0deg);
+            }
+
+            .ar-button {
+                padding: 12px 25px;
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-logo">
+            <svg width="100" height="40" viewBox="0 0 100 40">
+                <text x="5" y="30" font-size="20" font-weight="bold" fill="#1a237e">tcs</text>
+                <text x="50" y="30" font-size="20" font-weight="bold" fill="#1a237e">iON</text>
+            </svg>
+        </div>
+        <div class="header-logo" style="text-align: right;">
+            <div>
+                <div style="font-size: 22px; font-weight: bold; color: #2d5a2d;">Ed-Games Hub</div>
+                <div style="font-size: 11px; color: #666;">Built to engage learners at home and school</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Title Section -->
+    <section class="title-section">
+        <h1>Select to view and click pictures.</h1>
+    </section>
+
+    <!-- Grid of Model Cards -->
+    <main class="grid-container">
+        <!-- White Rhinoceros Card -->
+        <div class="model-card" onclick="openViewer('Whiterhinoceros.glb', 'White Rhinoceros')">
+            <div class="card-image">
+                <img src="model/whiterhinoceros.jpg" alt="White Rhinoceros" onerror="this.parentElement.innerHTML='<div style=\'padding:20px;color:#fff;font-size:40px\'>🦏</div>'">
+            </div>
+            <div class="card-title">White Rhinoceros</div>
+        </div>
+
+        <!-- Giraffe Card -->
+        <div class="model-card" onclick="openViewer('Giraffe.glb', 'Giraffe')">
+            <div class="card-image">
+                <img src="model/giraffe.jpg" alt="Giraffe" onerror="this.parentElement.innerHTML='<div style=\'padding:20px;color:#fff;font-size:40px\'>🦒</div>'">
+            </div>
+            <div class="card-title">Giraffe</div>
+        </div>
+
+        <!-- Hippo Card -->
+        <div class="model-card" onclick="openViewer('Hippo.glb', 'Hippopotamus')">
+            <div class="card-image">
+                <img src="model/hippo.jpg" alt="Hippopotamus" onerror="this.parentElement.innerHTML='<div style=\'padding:20px;color:#fff;font-size:40px\'>🦛</div>'">
+            </div>
+            <div class="card-title">Hippopotamus</div>
+        </div>
+
+        <!-- Wildebeest Card -->
+        <div class="model-card" onclick="openViewer('Wildebeest.glb', 'Wildebeest')">
+            <div class="card-image">
+                <img src="model/wildebeest.jpg" alt="Wildebeest" onerror="this.parentElement.innerHTML='<div style=\'padding:20px;color:#fff;font-size:40px\'>🐃</div>'">
+            </div>
+            <div class="card-title">Wildebeest</div>
+        </div>
+    </main>
+
+    <!-- Chat Bubble -->
+    <div class="chat-bubble" onclick="alert('Chat feature coming soon!')">
+        <svg viewBox="0 0 24 24">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
+            <path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/>
+        </svg>
+    </div>
+
+    <!-- Fullscreen Viewer Overlay -->
+    <div class="viewer-overlay" id="viewerOverlay">
+        <div class="viewer-header">
+            <span class="viewer-title" id="viewerTitle">Model Viewer</span>
+            <button class="close-btn" onclick="closeViewer()"></button>
+        </div>
+        <div class="viewer-container">
+            <model-viewer
+                id="modelViewer"
+                camera-controls
+                auto-rotate
+                shadow-intensity="1"
+                shadow-softness="0.5"
+                exposure="1"
+                environment-image="neutral"
+                ar
+                ar-modes="webxr scene-viewer quick-look"
+                camera-orbit="45deg 55deg 105%"
+                min-camera-orbit="auto auto 50%"
+                max-camera-orbit="Infinity Infinity 150%"
+                interaction-prompt="auto"
+                style="width: 100%; height: 100%;"
+            >
+                <button slot="ar-button" class="ar-button" id="arButton">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    View in AR
+                </button>
+            </model-viewer>
+            <div class="loading-indicator" id="loadingIndicator">
+                <div class="spinner"></div>
+                <span>Loading 3D Model...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Model data
+        const models = {
+            'Whiterhinoceros.glb': 'model/Whiterhinoceros.glb',
+            'Giraffe.glb': 'model/Giraffe.glb',
+            'Hippo.glb': 'model/Hippo.glb',
+            'Wildebeest.glb': 'model/Wildebeest.glb'
+        };
+
+        // DOM Elements
+        const viewerOverlay = document.getElementById('viewerOverlay');
+        const modelViewer = document.getElementById('modelViewer');
+        const viewerTitle = document.getElementById('viewerTitle');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        // Open fullscreen viewer
+        function openViewer(modelFile, modelName) {
+            const modelPath = models[modelFile] || `model/${modelFile}`;
+            
+            viewerTitle.textContent = modelName;
+            modelViewer.src = modelPath;
+            viewerOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            // Show loading indicator
+            loadingIndicator.style.display = 'flex';
+            
+            // Hide loading when model is loaded
+            modelViewer.addEventListener('load', function onLoad() {
+                loadingIndicator.style.display = 'none';
+                modelViewer.removeEventListener('load', onLoad);
+            });
+
+            // Handle error
+            modelViewer.addEventListener('error', function onError(e) {
+                loadingIndicator.innerHTML = '<span style="color: #ff6b6b;">Error loading model</span>';
+                setTimeout(() => {
+                    loadingIndicator.innerHTML = '<div class="spinner"></div><span>Loading 3D Model...</span>';
+                }, 3000);
+            });
+        }
+
+        // Close fullscreen viewer
+        function closeViewer() {
+            viewerOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+            
+            // Reset model to free memory
+            setTimeout(() => {
+                modelViewer.src = '';
+                loadingIndicator.innerHTML = '<div class="spinner"></div><span>Loading 3D Model...</span>';
+            }, 300);
+        }
+
+        // Close viewer with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && viewerOverlay.classList.contains('active')) {
+                closeViewer();
+            }
+        });
+
+        // Check AR support and update button accordingly
+        function checkARSupport() {
+            const arButton = document.querySelector('.ar-button');
+            
+            // Check for AR support
+            if (navigator.xr) {
+                navigator.xr.isSessionSupported('immersive-ar').then(supported => {
+                    if (!supported) {
+                        // Check for iOS Quick Look support
+                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                        if (!isIOS) {
+                            arButton.style.display = 'none';
+                        }
+                    }
+                });
+            } else {
+                // Check for iOS Quick Look support
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                const supportsARQuickLook = document.createElement('a').relList.supports('ar');
+                
+                if (!isIOS && !supportsARQuickLook) {
+                    arButton.style.display = 'none';
+                }
+            }
+        }
+
+        // Detect device type for AR
+        function detectDevice() {
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            
+            return {
+                ios: /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream,
+                android: /android/i.test(userAgent),
+                mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
+            };
+        }
+
+        // Prevent pull-to-refresh on mobile when viewing
+        document.addEventListener('touchmove', function(e) {
+            if (viewerOverlay.classList.contains('active')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkARSupport();
+            
+            const device = detectDevice();
+            console.log('Device detected:', device);
+            
+            // Add touch support for cards on mobile
+            const cards = document.querySelectorAll('.model-card');
+            cards.forEach(card => {
+                card.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    this.click();
+                });
+            });
+        });
+
+        // Service Worker for offline support (optional enhancement)
+        if ('serviceWorker' in navigator) {
+            // Could add service worker here for offline 3D model caching
+        }
+    </script>
+</body>
+</html>
